@@ -1,0 +1,145 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ==========================
+# 1) DADOS (já convertidos ,→.)
+# ==========================
+T = np.array([400, 500, 600, 700, 800, 900, 1000, 1100, 1200], dtype=float)
+
+# ==========================
+# DADOS CORRIGIDOS
+# ==========================
+
+# Temperaturas
+T = np.array([400, 500, 600, 700, 800, 900, 1000, 1100, 1200], dtype=float)
+
+# S = 30 m
+LBL_30  = np.array([0.958361577, 0.944575369, 0.945764245, 0.957258408,
+                    0.969664939, 0.978224689, 0.981962636, 0.981440438,
+                    0.977406643])
+WSGG_30 = np.array([0.961863772, 0.944031294, 0.946294639, 0.959021884,
+                    0.974768347, 0.988276585, 0.996476396, 0.998484819,
+                    0.995606133])
+
+# S = 10 m
+LBL_10  = np.array([0.9232181,   0.899221221, 0.880513683, 0.878387688,
+                    0.887063372, 0.898492561, 0.907209247, 0.910550868,
+                    0.907729893])
+WSGG_10 = np.array([0.929416283, 0.9060775,   0.894784311, 0.893219044,
+                    0.898595317, 0.90765804,  0.916683415, 0.921478935,
+                    0.917383381])
+
+# S = 1 m
+LBL_1  = np.array([0.736768574, 0.728738820, 0.689337163, 0.648819171,
+                   0.615711025, 0.589812063, 0.568223816, 0.548085056,
+                   0.527424848])
+WSGG_1 = np.array([0.742253025, 0.729281813, 0.697087719, 0.660027707,
+                   0.627435035, 0.603619259, 0.587866226, 0.574438079,
+                   0.552573258])
+
+# S = 0.1 m
+LBL_01  = np.array([0.387220855, 0.377166052, 0.343432226, 0.304996935,
+                    0.268982955, 0.237100098, 0.209243004, 0.184884430,
+                    0.163491159])
+WSGG_01 = np.array([0.393982702, 0.381004577, 0.351176581, 0.314913474,
+                    0.27953656,  0.249273688, 0.225259249, 0.205534182,
+                    0.185045969])
+
+
+
+# ===========================================
+# 2) FUNÇÃO PARA CALCULAR MÉTRICAS DE ERRO
+# ===========================================
+def calcular_erros(lbl, wsgg):
+    """Retorna dicionário com erros ponto a ponto."""
+    diff = wsgg - lbl                          # erro absoluto (diferença)
+    rel = diff / lbl                           # erro relativo em relação ao LBL
+    rel_sym = diff / ((np.abs(wsgg)+np.abs(lbl))/2)  # diferença relativa simétrica
+    rmse = np.sqrt(np.mean(diff**2))
+    mae = np.mean(np.abs(diff))
+    max_abs = np.max(np.abs(diff))
+    return {
+        "diff": diff,
+        "rel": rel,
+        "rel_sym": rel_sym,
+        "RMSE": rmse,
+        "MAE": mae,
+        "MAX_ABS": max_abs
+    }
+
+# ===========================================
+# 3) CÁLCULO DOS ERROS PARA CADA PERCURSO
+# ===========================================
+erros_30 = calcular_erros(LBL_30, WSGG_30)
+erros_10 = calcular_erros(LBL_10, WSGG_10)
+erros_1  = calcular_erros(LBL_1,  WSGG_1)
+erros_01 = calcular_erros(LBL_01, WSGG_01)
+
+# ==========================
+# 4) TABELA TEXTO NO TERMINAL
+# ==========================
+def imprimir_tabela(T, lbl, wsgg, erros, titulo):
+    print("\n" + "="*70)
+    print(titulo)
+    print("="*70)
+    print(f"{'T [K]':>6} | {'LBL':>10} | {'WSGG':>10} | {'Δ = WSGG-LBL':>13} | {'ERRO REL. %':>11}")
+    print("-"*70)
+    for Ti, li, wi, di, ri in zip(T, lbl, wsgg, erros["diff"], erros["rel"]):
+        print(f"{Ti:6.0f} | {li:10.6f} | {wi:10.6f} | {di:13.6f} | {ri*100:11.3f}")
+
+    print("-"*70)
+    print(f"RMSE = {erros['RMSE']:.6e}")
+    print(f"MAE  = {erros['MAE']:.6e}")
+    print(f"MAX |Δ| = {erros['MAX_ABS']:.6e}")
+
+imprimir_tabela(T, LBL_30, LBL_30 + erros_30["diff"], erros_30, "Percurso S = 30 m")
+imprimir_tabela(T, LBL_10, LBL_10 + erros_10["diff"], erros_10, "Percurso S = 10 m")
+imprimir_tabela(T, LBL_1,  LBL_1  + erros_1["diff"],  erros_1,  "Percurso S = 1 m")
+imprimir_tabela(T, LBL_01, LBL_01 + erros_01["diff"], erros_01, "Percurso S = 0,1 m")
+
+# ==========================
+# 5) GRÁFICOS DOS ERROS
+# ==========================
+plt.figure()
+plt.plot(T, erros_30["rel_sym"]*100, marker="o", label="30 m")
+plt.plot(T, erros_10["rel_sym"]*100, marker="s", label="10 m")
+plt.plot(T, erros_1["rel_sym"]*100,  marker="^", label="1 m")
+plt.plot(T, erros_01["rel_sym"]*100, marker="v", label="0,1 m")
+plt.axhline(0, linestyle="--")
+plt.xlabel("Temperatura [K]", fontsize=14)
+plt.ylabel("Erro relativo simétrico [%]", fontsize=14)
+plt.title("Erro relativo simétrico (WSGG vs LBL) para cada percurso", fontsize=16)
+plt.legend(fontsize=12)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+# Gráfico único comparando todas as emitâncias LBL e WSGG para todos os percursos
+plt.figure(figsize=(10,6))
+
+# --- S = 30 m ---
+plt.plot(T, LBL_30, marker="o", linestyle="-", label="LBL 30 m")
+plt.plot(T, WSGG_30, marker="o", linestyle="--", label="WSGG 30 m")
+
+# --- S = 10 m ---
+plt.plot(T, LBL_10, marker="s", linestyle="-", label="LBL 10 m")
+plt.plot(T, WSGG_10, marker="s", linestyle="--", label="WSGG 10 m")
+
+# --- S = 1 m ---
+plt.plot(T, LBL_1, marker="^", linestyle="-", label="LBL 1 m")
+plt.plot(T, WSGG_1, marker="^", linestyle="--", label="WSGG 1 m")
+
+# --- S = 0.1 m ---
+plt.plot(T, LBL_01, marker="v", linestyle="-", label="LBL 0.1 m")
+plt.plot(T, WSGG_01, marker="v", linestyle="--", label="WSGG 0.1 m")
+
+plt.xlabel("Temperatura [K]", fontsize=14)
+plt.ylabel("Emitância", fontsize=14)
+plt.title("Comparação LBL vs WSGG para todos os percursos", fontsize=16)
+plt.legend(ncol=2, fontsize=12)
+
+plt.ylim(0, 1)  # eixo Y fixo conforme solicitado
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
